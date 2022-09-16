@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,7 +19,7 @@ func init() {
 	registry.AddProvider(&XdccEuProvider{})
 }
 
-var defaultColWidths []int = []int{100, 10, -1}
+var defaultColWidths []int = []int{50, 8, 26, -1}
 
 const (
 	KiloByte = 1024
@@ -50,12 +51,9 @@ func formatSize(size int64) string {
 
 func searchCommand(args []string) {
 	searchCmd := flag.NewFlagSet("search", flag.ExitOnError)
-	sortByFilename := searchCmd.Bool("s", false, "sort results by filename")
+	// sortByFilename := searchCmd.Bool("s", false, "sort results by filename")
 
 	args = parseFlags(searchCmd, args)
-
-	printer := NewTablePrinter([]string{"File Name", "Size", "URL"})
-	printer.SetMaxWidths(defaultColWidths)
 
 	if len(args) < 1 {
 		fmt.Println("search: no keyword provided.")
@@ -63,14 +61,12 @@ func searchCommand(args []string) {
 	}
 
 	res, _ := registry.Search(args)
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].Gets < res[j].Gets
+	})
 	for _, fileInfo := range res {
-		printer.AddRow(Row{fileInfo.Name, formatSize(fileInfo.Size), fileInfo.Url})
+		fmt.Printf("%s\n\tgets: %d\n\tsize: %s\n\tlink: %s\n\tcmd: %s\n", fileInfo.Name, fileInfo.Gets, formatSize(fileInfo.Size), fileInfo.Url, fileInfo.Command)
 	}
-
-	if *sortByFilename {
-		printer.SortByColumn(0)
-	}
-	printer.Print()
 }
 
 func transferLoop(transfer *XdccTransfer) {
@@ -206,13 +202,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	switch os.Args[1] {
-	case "search":
-		searchCommand(os.Args[2:])
-	case "get":
-		getCommand(os.Args[2:])
-	default:
-		fmt.Println("no such command: ", os.Args[1])
-		os.Exit(1)
-	}
+	searchCommand(os.Args[1:])
+	// switch os.Args[1] {
+	// case "search":
+	// case "get":
+	// 	getCommand(os.Args[2:])
+	// default:
+	// 	fmt.Println("no such command: ", os.Args[1])
+	// 	os.Exit(1)
+	// }
 }

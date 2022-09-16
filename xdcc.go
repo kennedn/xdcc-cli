@@ -17,7 +17,7 @@ import (
 	irc "github.com/fluffle/goirc/client"
 )
 
-const IRCClientUserName = "xdcc-cli"
+const IRCClientUserName = "basedbogsnak"
 
 type CTCPRequest interface {
 	String() string
@@ -177,7 +177,7 @@ func (transfer *XdccTransfer) setupHandlers(channel string, userName string, slo
 		})
 
 	conn.HandleFunc(irc.ERROR, func(conn *irc.Conn, line *irc.Line) {
-
+		fmt.Printf("Error\n")
 	})
 
 	// send xdcc send on successfull join

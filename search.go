@@ -16,9 +16,11 @@ type XdccFileInfo struct {
 	Channel string
 	BotName string
 	Name    string
+	Gets    int
 	Url     string
+	Command string
 	Size    int64
-	Slot    int
+	Slot    string
 }
 
 type XdccSearchProvider interface {
@@ -103,21 +105,13 @@ func (p *XdccEuProvider) parseFields(fields []string) (*XdccFileInfo, error) {
 	fInfo.Network = fields[0]
 	fInfo.Channel = fields[1]
 	fInfo.BotName = fields[2]
-	slot, err := strconv.Atoi(fields[3][1:])
-
-	if err != nil {
-		return nil, err
+	fInfo.Slot = fields[3]
+	if gets, err := strconv.Atoi(fields[4][:len(fields[4])-1]); err == nil {
+		fInfo.Gets = gets
 	}
 
 	fInfo.Size, _ = parseFileSize(fields[5]) // ignoring error
-
 	fInfo.Name = fields[6]
-
-	if err != nil {
-		return nil, err
-	}
-
-	fInfo.Slot = slot
 	return fInfo, nil
 }
 
@@ -145,7 +139,10 @@ func (p *XdccEuProvider) Search(keywords []string) ([]XdccFileInfo, error) {
 	}
 
 	fileInfos := make([]XdccFileInfo, 0)
-	doc.Find("tr").Each(func(_ int, s *goquery.Selection) {
+	doc.Find("tr").Each(func(j int, s *goquery.Selection) {
+		if j == 0 { // Skip header
+			return
+		}
 		fields := make([]string, 0)
 
 		var url string
@@ -161,7 +158,8 @@ func (p *XdccEuProvider) Search(keywords []string) ([]XdccFileInfo, error) {
 
 		info, err := p.parseFields(fields)
 		if err == nil {
-			info.Url = url + "/" + info.BotName + "/" + strconv.Itoa(info.Slot)
+			info.Url = strings.Replace(url, "irc://", "http://", 1)
+			info.Command = "/msg " + info.BotName + " xdcc send " + info.Slot
 			fileInfos = append(fileInfos, *info)
 		}
 	})
